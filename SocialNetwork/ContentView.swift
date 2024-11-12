@@ -4,21 +4,24 @@
 //
 //  Created by Kobe Berckmans on 30/10/2024.
 //
-
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        if authViewModel.isSignedIn {
+            EventListView()
+        } else {
+            NavigationView {
+                LoginView()
+            }
         }
-        .padding()
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AuthViewModel()) // Preview werkt nu met AuthViewModel
 }
+
