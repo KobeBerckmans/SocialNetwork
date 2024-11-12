@@ -38,10 +38,12 @@ class AuthViewModel: ObservableObject {
             }
         }
     }
-
-    func signOut() {
-        try? Auth.auth().signOut()
-        self.isSignedIn = false
-        self.currentUser = nil
-    }
+    func logout() {
+           do {
+               try Auth.auth().signOut()
+               self.currentUser = nil
+           } catch {
+               print("Error logging out: \(error)")
+           }
+       }
 }

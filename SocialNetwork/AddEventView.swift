@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AddEventView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
-    @Binding var events: [Event]
+    @ObservedObject var eventService: EventService
 
     @State private var title = ""
     @State private var location = ""
@@ -27,16 +27,22 @@ struct AddEventView: View {
                 .padding()
 
             Button("Add Event") {
+                guard let organizer = authViewModel.currentUser else {
+                    print("Error: No current user found.")
+                    return
+                }
+
                 let newEvent = Event(
                     title: title,
                     location: location,
                     description: description,
                     date: date,
-                    organizer: authViewModel.currentUser ?? "Unknown",
+                    organizer: organizer,
                     attendees: [],
                     isAttending: false
                 )
-                events.append(newEvent)
+                
+                eventService.addEvent(event: newEvent)
             }
             .padding()
         }
