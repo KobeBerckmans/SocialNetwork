@@ -6,11 +6,17 @@ class AuthViewModel: ObservableObject {
     @Published var currentUser: String?
 
     init() {
-        // Controleer of de gebruiker is ingelogd
-        if let user = Auth.auth().currentUser {
-            isSignedIn = true
-            currentUser = user.email // of gebruik user.displayName als die beschikbaar is
+        forceSignOut()
+    }
+
+    func forceSignOut() {
+        do {
+            try Auth.auth().signOut()
+        } catch {
+            print("Error signing out: \(error.localizedDescription)")
         }
+        isSignedIn = false
+        currentUser = nil
     }
 
     func signIn(email: String, password: String) {
@@ -18,7 +24,7 @@ class AuthViewModel: ObservableObject {
             if error == nil, let user = authResult?.user {
                 DispatchQueue.main.async {
                     self?.isSignedIn = true
-                    self?.currentUser = user.email // of user.displayName
+                    self?.currentUser = user.email
                 }
             } else {
                 print("Error signing in: \(error?.localizedDescription ?? "Unknown error")")
@@ -31,19 +37,21 @@ class AuthViewModel: ObservableObject {
             if error == nil, let user = authResult?.user {
                 DispatchQueue.main.async {
                     self?.isSignedIn = true
-                    self?.currentUser = user.email // of user.displayName
+                    self?.currentUser = user.email
                 }
             } else {
                 print("Error signing up: \(error?.localizedDescription ?? "Unknown error")")
             }
         }
     }
-    func logout() {
-           do {
-               try Auth.auth().signOut()
-               self.currentUser = nil
-           } catch {
-               print("Error logging out: \(error)")
-           }
-       }
+
+    func signOut() {
+        do {
+            try Auth.auth().signOut()
+            self.isSignedIn = false
+            self.currentUser = nil
+        } catch {
+            print("Error signing out: \(error.localizedDescription)")
+        }
+    }
 }

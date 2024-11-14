@@ -3,68 +3,43 @@ import SwiftUI
 struct EventRow: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     var event: Event
-    var onEventUpdated: (Event) -> Void
-    
-    @State private var isAttending = false
+    var onAttendanceChanged: (Event) -> Void
 
     var body: some View {
         VStack(alignment: .leading) {
             Text(event.title)
                 .font(.headline)
-            Text(event.location)
+            Text("Location: \(event.location)")
                 .font(.subheadline)
+            Text("Organizer: \(event.organizer)")
+                .font(.footnote)
+                .foregroundColor(.gray)
             Text(event.description)
                 .font(.body)
-            
-            // Gebruik de aangepaste DateFormatter voor een korte datumweergave
-            Text("Date: \(event.date, formatter: DateFormatter.shortDateFormatter)")
+            Text("Date: \(event.date, formatter: dateFormatter)")
                 .font(.footnote)
-                .padding(.bottom, 5)
-            
-            // Toont de aanwezigen
+
             if !event.attendees.isEmpty {
                 Text("Attendees: \(event.attendees.joined(separator: ", "))")
-                    .font(.subheadline)
-                    .padding(.bottom, 5)
-            }
-
-            Button(action: {
-                isAttending.toggle()
-                updateAttendance()
-            }) {
-                Text(isAttending ? "I am attending" : "I am not attending")
+                    .font(.footnote)
                     .foregroundColor(.blue)
             }
-        }
-        .padding()
-    }
-    
-    func updateAttendance() {
-        guard let currentUser = authViewModel.currentUser else { return }
-        
-        var updatedEvent = event
-        
-        if isAttending {
-            // Voeg de gebruiker toe aan de lijst van aanwezigen
-            updatedEvent.attendees.append(currentUser)
-        } else {
-            // Verwijder de gebruiker uit de lijst van aanwezigen
-            updatedEvent.attendees.removeAll { $0 == currentUser }
-        }
-        
-        // Sla de bijgewerkte event op in Firestore
-        EventService().updateEvent(event: updatedEvent)
-        
-        // Zorg ervoor dat de list van evenementen ook bijgewerkt wordt
-        onEventUpdated(updatedEvent)
-    }
-}
 
-extension DateFormatter {
-    static let shortDateFormatter: DateFormatter = {
+            Button(event.isAttending ? "Mark as Absent" : "Mark as Attending") {
+                var updatedEvent = event
+                updatedEvent.toggleAttendance(for: authViewModel.currentUser ?? "Unknown")
+                updatedEvent.isAttending.toggle()
+                onAttendanceChanged(updatedEvent)
+            }
+            .padding(.top, 5)
+            .buttonStyle(BorderlessButtonStyle())
+        }
+        .padding(.vertical, 5)
+    }
+
+    private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .none
+        formatter.dateStyle = .medium
         return formatter
-    }()
+    }
 }

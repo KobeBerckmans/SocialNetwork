@@ -1,66 +1,98 @@
 import SwiftUI
+import FirebaseFirestore
 
 struct EventListView: View {
-    @StateObject var eventService = EventService()
     @EnvironmentObject var authViewModel: AuthViewModel
+    @State private var events: [Event] = []
     @State private var filterLocation: String = ""
     @State private var showAddEvent = false
-    @State private var showSettings = false
-    @State private var navigateToLogin = false
+    private let db = Firestore.firestore()
 
     var filteredEvents: [Event] {
         if filterLocation.isEmpty {
-            return eventService.events
+            return events
         } else {
-            return eventService.events.filter { $0.location.lowercased().contains(filterLocation.lowercased()) }
+            return events.filter { $0.location.lowercased().contains(filterLocation.lowercased()) }
         }
     }
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                TextField("Filter by location", text: $filterLocation)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding()
-
-                List {
-                    ForEach(filteredEvents) { event in
-                        EventRow(event: event, onEventUpdated: { updatedEvent in
-                            eventService.updateEvent(event: updatedEvent)
-                        })
-                        .environmentObject(authViewModel)
-                    }
-                }
-
-                Button("Add New Event") {
-                    showAddEvent = true
-                }
+        VStack {
+            TextField("Filter by location", text: $filterLocation)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding()
-                .sheet(isPresented: $showAddEvent) {
-                    AddEventView(eventService: eventService)
-                }
-            }
-            .navigationTitle("Events")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showSettings.toggle()
-                    }) {
-                        Image(systemName: "gearshape.fill")
-                            .imageScale(.large)
+
+            List {
+                ForEach(filteredEvents) { event in
+                    EventRow(event: event) { updatedEvent in
+                        if let index = events.firstIndex(where: { $0.id == updatedEvent.id }) {
+                            events[index] = updatedEvent
+                            saveEventToFirestore(updatedEvent)
+                        }
                     }
                 }
             }
-            .sheet(isPresented: $showSettings) {
-                SettingsView(authViewModel: _authViewModel, navigateToLogin: $navigateToLogin)
+
+            Button("Add New Event") {
+                showAddEvent = true
+            }
+            .padding()
+            .sheet(isPresented: $showAddEvent) {
+                AddEventView(events: $events)
+                    .environmentObject(authViewModel)
+            }
+        }
+        .navigationTitle("Events")
+        .navigationBarItems(trailing: Button(action: {
+            authViewModel.signOut()
+        }) {
+            Image(systemName: "arrow.backward.circle")
+                .imageScale(.large)
+        })
+        .onAppear(perform: fetchEventsFromFirestore)
+    }
+
+    // Functie om evenementen uit Firestore op te halen
+    private func fetchEventsFromFirestore() {
+        db.collection("events").getDocuments { snapshot, error in
+            if let error = error {
+                print("Error fetching events: \(error.localizedDescription)")
+                return
             }
 
-            // Zorg voor de navigatie naar de LoginView als de navigateToLogin true is
-            NavigationLink(destination: LoginView(), isActive: $navigateToLogin) {
-                EmptyView()
+            guard let documents = snapshot?.documents else { return }
+            events = documents.compactMap { document in
+                let data = document.data()
+                return Event(
+                    title: data["title"] as? String ?? "",
+                    location: data["location"] as? String ?? "",
+                    description: data["description"] as? String ?? "",
+                    date: (data["date"] as? Timestamp)?.dateValue() ?? Date(),
+                    organizer: data["organizer"] as? String ?? "",
+                    attendees: data["attendees"] as? [String] ?? [],
+                    isAttending: data["isAttending"] as? Bool ?? false
+                )
             }
-            .hidden()
+        }
+    }
+
+    // Functie om het bijgewerkte evenement op te slaan in Firestore
+    private func saveEventToFirestore(_ updatedEvent: Event) {
+        let eventID = updatedEvent.id.uuidString
+        db.collection("events").document(eventID).setData([
+            "title": updatedEvent.title,
+            "location": updatedEvent.location,
+            "description": updatedEvent.description,
+            "date": updatedEvent.date,
+            "organizer": updatedEvent.organizer,
+            "attendees": updatedEvent.attendees,
+            "isAttending": updatedEvent.isAttending
+        ]) { error in
+            if let error = error {
+                print("Error saving event to Firestore: \(error.localizedDescription)")
+            } else {
+                print("Event successfully saved to Firestore!")
+            }
         }
     }
 }
-
