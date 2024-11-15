@@ -6,6 +6,7 @@ struct EventListView: View {
     @State private var events: [Event] = []
     @State private var filterLocation: String = ""
     @State private var showAddEvent = false
+    @State private var navigateToChatroom = false // State voor navigatie naar de chatroom
     private let db = Firestore.firestore()
 
     var filteredEvents: [Event] {
@@ -17,42 +18,68 @@ struct EventListView: View {
     }
 
     var body: some View {
-        VStack {
-            TextField("Filter by location", text: $filterLocation)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
+        NavigationStack {
+            VStack {
+                TextField("Filter by location", text: $filterLocation)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding()
 
-            List {
-                ForEach(filteredEvents) { event in
-                    EventRow(event: event) { updatedEvent in
-                        if let index = events.firstIndex(where: { $0.id == updatedEvent.id }) {
-                            events[index] = updatedEvent
-                            saveEventToFirestore(updatedEvent)
+                List {
+                    ForEach(filteredEvents) { event in
+                        EventRow(event: event) { updatedEvent in
+                            if let index = events.firstIndex(where: { $0.id == updatedEvent.id }) {
+                                events[index] = updatedEvent
+                                saveEventToFirestore(updatedEvent)
+                            }
                         }
                     }
                 }
-            }
 
-            Button("Add New Event") {
-                showAddEvent = true
+                Spacer() // Push de knoppen naar onderaan het scherm
+
+                HStack {
+                    NavigationLink(
+                        destination: ChatRoomView(), // Algemene chatroom als bestemming
+                        isActive: $navigateToChatroom
+                    ) {
+                        EmptyView() // Verplicht voor NavigationLink zonder directe inhoud
+                    }
+
+                    Button("Go to Chatroom") {
+                        navigateToChatroom = true // Activeer navigatie
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+
+                    Button("Add New Event") {
+                        showAddEvent = true
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                .sheet(isPresented: $showAddEvent) {
+                    AddEventView(events: $events)
+                        .environmentObject(authViewModel)
+                }
             }
-            .padding()
-            .sheet(isPresented: $showAddEvent) {
-                AddEventView(events: $events)
-                    .environmentObject(authViewModel)
-            }
+            .navigationTitle("Events")
+            .navigationBarItems(trailing: Button(action: {
+                authViewModel.signOut()
+            }) {
+                Image(systemName: "arrow.backward.circle")
+                    .imageScale(.large)
+            })
+            .onAppear(perform: fetchEventsFromFirestore)
         }
-        .navigationTitle("Events")
-        .navigationBarItems(trailing: Button(action: {
-            authViewModel.signOut()
-        }) {
-            Image(systemName: "arrow.backward.circle")
-                .imageScale(.large)
-        })
-        .onAppear(perform: fetchEventsFromFirestore)
     }
 
-    // Functie om evenementen uit Firestore op te halen
     private func fetchEventsFromFirestore() {
         db.collection("events").getDocuments { snapshot, error in
             if let error = error {
@@ -76,7 +103,6 @@ struct EventListView: View {
         }
     }
 
-    // Functie om het bijgewerkte evenement op te slaan in Firestore
     private func saveEventToFirestore(_ updatedEvent: Event) {
         let eventID = updatedEvent.id.uuidString
         db.collection("events").document(eventID).setData([
