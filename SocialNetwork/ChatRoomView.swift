@@ -9,33 +9,59 @@ struct ChatRoomView: View {
 
     var body: some View {
         VStack {
-            List(messages) { message in
-                VStack(alignment: .leading) {
-                    Text(message.sender)
-                        .font(.footnote)
-                        .foregroundColor(.gray)
-                    Text(message.content)
-                        .font(.body)
+            // Messages List
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(messages) { message in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(message.sender)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                Text(message.content)
+                                    .font(.body)
+                                    .padding(10)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(10)
+                            }
+                            Spacer()
+                        }
+                    }
                 }
+                .padding()
             }
+            .background(Color(.systemGray5))
+            .cornerRadius(15)
+            .padding()
 
+            // Message Input
             HStack {
-                TextField("Type a message", text: $newMessage)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                Button("Send") {
-                    sendMessage()
+                TextField("Type a message...", text: $newMessage)
+                    .padding(10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+
+                Button(action: sendMessage) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 30))
+                        .foregroundColor(.blue)
                 }
                 .disabled(newMessage.isEmpty)
             }
             .padding()
+            .background(Color.white)
+            .cornerRadius(15)
+            .shadow(radius: 5)
+            .padding()
         }
         .navigationTitle("Chat Room")
         .onAppear(perform: fetchMessages)
+        .background(Color(.systemGray6).edgesIgnoringSafeArea(.all))
     }
 
     private func fetchMessages() {
-        db.collection("chatrooms") // Vaste collectie voor de algemene chat
-            .document("general") // Document-ID voor de algemene chat
+        db.collection("chatrooms")
+            .document("general")
             .collection("messages")
             .order(by: "timestamp")
             .addSnapshotListener { snapshot, error in
@@ -62,8 +88,8 @@ struct ChatRoomView: View {
             "sender": sender,
             "timestamp": Timestamp()
         ]
-        db.collection("chatrooms") // Vaste collectie
-            .document("general") // Document-ID voor de algemene chat
+        db.collection("chatrooms")
+            .document("general")
             .collection("messages")
             .addDocument(data: messageData) { error in
                 if let error = error {

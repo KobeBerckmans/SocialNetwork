@@ -19,63 +19,69 @@ struct EventListView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
-                TextField("Filter by location", text: $filterLocation)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding()
+            VStack(spacing: 16) {
+                // Header
+                Text("Explore Events")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.blue)
+                    .padding(.top, 20)
 
-                List {
-                    ForEach(filteredEvents) { event in
-                        EventRow(event: event) { updatedEvent in
-                            if let index = events.firstIndex(where: { $0.id == updatedEvent.id }) {
-                                events[index] = updatedEvent
-                                saveEventToFirestore(updatedEvent)
-                            }
+                // Filter Input
+                TextField("Search by location...", text: $filterLocation)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+
+                // Event List
+                List(filteredEvents) { event in
+                    EventRow(event: event) { updatedEvent in
+                        if let index = events.firstIndex(where: { $0.id == updatedEvent.id }) {
+                            events[index] = updatedEvent
+                            saveEventToFirestore(updatedEvent)
                         }
                     }
                 }
+                .listStyle(InsetGroupedListStyle())
 
-                Spacer() // Push de knoppen naar onderaan het scherm
-
+                // Action Buttons
                 HStack {
-                    NavigationLink(
-                        destination: ChatRoomView(), // Algemene chatroom als bestemming
-                        isActive: $navigateToChatroom
-                    ) {
-                        EmptyView() // Verplicht voor NavigationLink zonder directe inhoud
+                    NavigationLink(destination: ChatRoomView()) {
+                        Text("Go to Chatroom")
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
                     }
 
-                    Button("Go to Chatroom") {
-                        navigateToChatroom = true // Activeer navigatie
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-
-                    Button("Add New Event") {
+                    Button(action: {
                         showAddEvent = true
+                    }) {
+                        Text("Add Event")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.green)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
                 }
                 .padding(.horizontal)
-                .sheet(isPresented: $showAddEvent) {
-                    AddEventView(events: $events)
-                        .environmentObject(authViewModel)
-                }
             }
             .navigationTitle("Events")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button(action: {
                 authViewModel.signOut()
             }) {
                 Image(systemName: "arrow.backward.circle")
                     .imageScale(.large)
+                    .foregroundColor(.red)
             })
+            .sheet(isPresented: $showAddEvent) {
+                AddEventView(events: $events)
+                    .environmentObject(authViewModel)
+            }
             .onAppear(perform: fetchEventsFromFirestore)
         }
     }
