@@ -45,5 +45,5 @@ De **Social Network App** is een innovatieve iOS-applicatie waarmee gebruikers e
 - [Firebase voor iOS](https://firebase.google.com/)
 - [SwiftUI-documentatie](https://www.cometchat.com/tutorials/ios-chat-app-swift)
 - https://chatgpt.com/
-
+- [Firebase tutorial voor database](https://www.youtube.com/watch?v=pP7quzFmWBY)
 ## Kobe Berckmans
